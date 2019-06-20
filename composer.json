@@ -1,0 +1,41 @@
+{
+    "name": "huangdijia/laravel-macro-ide-helper",
+    "description": "Laravel IDE Helper, generates correct PHPDocs for all Macros method, to improve auto-completion.",
+    "keywords": ["laravel", "autocomplete", "ide", "helper", "phpstorm", "netbeans", "sublime", "codeintel", "phpdoc"],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Huangdijia",
+            "email": "huangdijia@gmail.com"
+        }
+    ],
+    "require": {
+        "php": ">=7",
+        "illuminate/support": "5.*",
+        "illuminate/console": "5.*",
+        "illuminate/filesystem": "5.*",
+        "barryvdh/reflection-docblock": "^2.0.6",
+        "composer/composer": "^1.6"
+    },
+    "require-dev": {
+        "illuminate/config": "^5.1,<5.9",
+        "illuminate/view": "^5.1,<5.9",
+        "phpro/grumphp": "^0.14",
+        "phpunit/phpunit" : "4.*",
+        "scrutinizer/ocular": "~1.1",
+        "squizlabs/php_codesniffer": "^3",
+        "doctrine/dbal": "~2.3"
+    },
+    "autoload": {
+        "psr-4": {
+            "Huangdijia\\IdeHelper\\": "src"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Huangdijia\\IdeHelper\\IdeHelperServiceProvider"
+            ]
+        }
+    }
+}
