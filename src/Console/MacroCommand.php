@@ -2,9 +2,9 @@
 
 namespace Huangdijia\IdeHelper\Console;
 
-use Illuminate\Support\Str;
-use Illuminate\Console\Command;
 use Barryvdh\Reflection\DocBlock;
+use Illuminate\Console\Command;
+use Illuminate\Support\Str;
 use Illuminate\Support\Traits\Macroable;
 
 class MacroCommand extends Command
@@ -21,25 +21,18 @@ class MacroCommand extends Command
             return;
         }
 
-        $classMaps      = include $classMapFile;
-        $helperContents = [];
+        $classMaps  = include $classMapFile;
+        $namespaces = config('macro-ide-helper.namespaces');
 
-        $namespaces = config('macro-ide-helper.namespaces', [
-            'App\\',
-            'Illuminate\\',
-        ]);
-
-        collect($classMaps)
+        $docs = collect($classMaps)
             ->filter(function ($path, $class) use ($namespaces) {
                 return Str::startsWith($class, $namespaces);
             })
             ->reject(function ($path, $class) {
-                $rejects = config('macro-ide-helper.rejects', [
-                    'Illuminate\\Filesystem\\Cache',
-                ]);
+                $rejects = config('macro-ide-helper.rejects', []);
                 return in_array($class, $rejects);
             })
-            ->each(function ($path, $class) use (&$helperContents) {
+            ->mapWithKeys(function ($path, $class) {
                 try {
                     $reflection = new \ReflectionClass($class);
                     $traits     = array_keys($reflection->getTraits() ?? []);
@@ -48,27 +41,42 @@ class MacroCommand extends Command
                         empty($traits)
                         || !in_array(Macroable::class, $traits)
                     ) {
-                        return;
+                        return [];
+                    }
+
+                    return [$class => $reflection];
+                } catch (\Exception $e) {
+                    $this->error($e->getMessage());
+                    return [];
+                }
+            })
+            ->filter()
+            ->mapToGroups(function ($reflection, $class) {
+                try {
+                    $traits = array_keys($reflection->getTraits() ?? []);
+
+                    if (
+                        empty($traits)
+                        || !in_array(Macroable::class, $traits)
+                    ) {
+                        return [];
                     }
 
                     $namespace = $reflection->getNamespaceName();
                     $shortName = $reflection->getShortName();
-                    $property = $reflection->getProperty('macros');
+                    $property  = $reflection->getProperty('macros');
                     $property->setAccessible(true);
                     $macros = $property->getValue(null);
 
                     if (empty($macros)) {
-                        return;
+                        return [];
                     }
 
-                    $phpDoc = new DocBlock($reflection, new DocBlock\Context($reflection->getNamespaceName()));
+                    $phpDoc = new DocBlock($reflection, new DocBlock\Context($namespace));
                     $phpDoc->setText($class);
 
-                    foreach ($macros as $macroName => $macroCallback) {
-                        $macro = new \ReflectionFunction($macroCallback);
-                        // $params = array_map(function (\ReflectionParameter $parameter) {
-                        //     return $this->prepareParameter($parameter);
-                        // }, $macro->getParameters());
+                    foreach ($macros as $macroName => $closure) {
+                        $macro      = new \ReflectionFunction($closure);
                         $params     = join(', ', array_map([$this, 'prepareParameter'], $macro->getParameters()));
                         $doc        = $macro->getDocComment();
                         $returnType = $doc && preg_match('/@return ([a-zA-Z\[\]\|\\\]+)/', $doc, $matches) ? $matches[1] : '';
@@ -82,31 +90,33 @@ class MacroCommand extends Command
                     $serializer = new DocBlock\Serializer;
                     $docComment = $serializer->getDocComment($phpDoc);
 
-                    $helperContents[$namespace][] = [
-                        'shortName'  => $shortName,
-                        'docComment' => $docComment,
+                    return [
+                        $namespace => [
+                            'shortName'  => $shortName,
+                            'docComment' => $docComment,
+                        ],
                     ];
 
                 } catch (\Throwable $e) {
                     $this->error($e->getMessage());
-                    return;
+                    return [];
                 }
+            })
+            ->reject(function ($a, $class) {
+                return !$class;
             });
 
         $contents   = [];
         $contents[] = "<?php";
         $contents[] = "// @formatter:off";
-        $contents[] = '';
 
-        foreach ($helperContents as $namespace => $classes) {
+        foreach ($docs as $namespace => $classes) {
             $contents[] = "namespace {$namespace} {";
             $contents[] = '';
 
             foreach ($classes as $class) {
                 $contents[] = $class['docComment'];
-                $contents[] = "    class {$class['shortName']}";
-                $contents[] = "    {";
-                $contents[] = "    }";
+                $contents[] = "    class {$class['shortName']} {}";
                 $contents[] = '';
             }
             $contents[] = "}";
@@ -131,13 +141,14 @@ class MacroCommand extends Command
     private function prepareParameter(\ReflectionParameter $parameter): string
     {
         $parameterString = trim(optional($parameter->getType())->getName() . ' $' . $parameter->getName());
+
         if ($parameter->isOptional()) {
             if ($parameter->isVariadic()) {
                 $parameterString = '...' . $parameterString;
             } else {
                 $defaultValue = $parameter->isArray() ? '[]' : ($parameter->getDefaultValue() ?? 'null');
-                $defaultValue = is_array($defaultValue) ? join(', ', $defaultValue) : $defaultValue;
-                $parameterString .= " = {$defaultValue}";
+                $defaultValue = preg_replace('/\s+/', ' ', var_export($defaultValue, 1));
+                $parameterString .= sprintf(" = %s", $defaultValue);
             }
         }
 

@@ -11,9 +11,13 @@ class IdeHelperServiceProvider extends ServiceProvider
 
     public function boot()
     {
+        $configPath = __DIR__ . '/../config/macro-ide-helper.php';
+
         if ($this->app->runningInConsole()) {
-            $this->publishes([__DIR__ . '/../config/macro-ide-helper.php' => app()->basePath('config/macro-ide-helper.php')], 'config');
+            $this->publishes([$configPath => app()->basePath('config/macro-ide-helper.php')], 'config');
         }
+
+        $this->mergeConfigFrom($configPath, 'mitake');
     }
 
     public function register()
