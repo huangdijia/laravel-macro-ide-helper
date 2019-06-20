@@ -53,18 +53,10 @@ class MacroCommand extends Command
             ->filter()
             ->mapToGroups(function ($reflection, $class) {
                 try {
-                    $traits = array_keys($reflection->getTraits() ?? []);
-
-                    if (
-                        empty($traits)
-                        || !in_array(Macroable::class, $traits)
-                    ) {
-                        return [];
-                    }
-
                     $namespace = $reflection->getNamespaceName();
                     $shortName = $reflection->getShortName();
-                    $property  = $reflection->getProperty('macros');
+
+                    $property = $reflection->getProperty('macros');
                     $property->setAccessible(true);
                     $macros = $property->getValue(null);
 
@@ -75,14 +67,21 @@ class MacroCommand extends Command
                     $phpDoc = new DocBlock($reflection, new DocBlock\Context($namespace));
                     $phpDoc->setText($class);
 
-                    foreach ($macros as $macroName => $closure) {
-                        $macro      = new \ReflectionFunction($closure);
+                    foreach ($macros as $name => $closure) {
+                        $macro = new \ReflectionFunction($closure);
+
                         $params     = join(', ', array_map([$this, 'prepareParameter'], $macro->getParameters()));
                         $doc        = $macro->getDocComment();
                         $returnType = $doc && preg_match('/@return ([a-zA-Z\[\]\|\\\]+)/', $doc, $matches) ? $matches[1] : '';
-                        $tag        = DocBlock\Tag::createInstance("@method {$returnType} {$macroName}({$params})", $phpDoc);
+                        $phpDoc->appendTag(DocBlock\Tag::createInstance("@method {$returnType} {$name}({$params})"));
 
-                        $phpDoc->appendTag($tag);
+                        $see = $macro->getClosureScopeClass()->getName();
+                        $phpDoc->appendTag(DocBlock\Tag::createInstance("@see \\{$see}", $phpDoc));
+
+                        $sourceFile = Str::replaceFirst(base_path() . '/', '', $macro->getFileName());
+                        $startLine  = $macro->getStartLine();
+                        $endLine    = $macro->getEndLine();
+                        $phpDoc->appendTag(DocBlock\Tag::createInstance("@see {$sourceFile} {$startLine} {$endLine}", $phpDoc));
                     }
 
                     $phpDoc->appendTag(DocBlock\Tag::createInstance('@package macro_ide_helper'));
