@@ -2,7 +2,6 @@
 
 namespace Huangdijia\IdeHelper;
 
-use Huangdijia\IdeHelper\Console\MacroCommand;
 use Illuminate\Support\ServiceProvider;
 
 class IdeHelperServiceProvider extends ServiceProvider
@@ -23,7 +22,7 @@ class IdeHelperServiceProvider extends ServiceProvider
     public function register()
     {
         $this->commands([
-            MacroCommand::class,
+            Console\MacroCommand::class,
         ]);
     }
 }

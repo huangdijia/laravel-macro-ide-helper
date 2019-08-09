@@ -11,15 +11,15 @@
     ],
     "require": {
         "php": ">=7",
-        "illuminate/support": "5.*",
-        "illuminate/console": "5.*",
-        "illuminate/filesystem": "5.*",
+        "illuminate/support": "~5.7.0|~5.8.0|~6.0.0",
+        "illuminate/console": "~5.7.0|~5.8.0|~6.0.0",
+        "illuminate/filesystem": "~5.7.0|~5.8.0|~6.0.0",
         "barryvdh/reflection-docblock": "^2.0.6",
         "composer/composer": "^1.6"
     },
     "require-dev": {
-        "illuminate/config": "^5.1,<5.9",
-        "illuminate/view": "^5.1,<5.9",
+        "illuminate/config": "~5.7.0|~5.8.0|~6.0.0",
+        "illuminate/view": "~5.7.0|~5.8.0|~6.0.0",
         "phpro/grumphp": "^0.14",
         "phpunit/phpunit" : "4.*",
         "scrutinizer/ocular": "~1.1",
