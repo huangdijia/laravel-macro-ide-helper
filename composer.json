@@ -13,7 +13,7 @@
         "illuminate/console": "^5.7|^6.0|^7.0|^8.0",
         "illuminate/filesystem": "^5.7|^6.0|^7.0|^8.0",
         "barryvdh/reflection-docblock": "^2.0.6",
-        "composer/composer": "^1.6"
+        "composer/composer": "^1.6|^2.0"
     },
     "require-dev": {
         "illuminate/config": "^5.7|^6.0|^7.0|^8.0",
